@@ -24,6 +24,9 @@ namespace HealthbarGames
         public Material GreenOffMat;
 
         private bool mInitialized = false;
+        private bool isRedOn = false;
+        private bool isYellowOn = false;
+        private bool isGreenOn = false;
 
         void Awake()
         {
@@ -40,32 +43,47 @@ namespace HealthbarGames
             }
         }
 
-        // Called when light state changes
         public override void OnLightStateChanged(bool redLightState, bool yellowLightState, bool greenLightState)
         {
             if (!mInitialized)
                 return;
 
-            // 🔴 RED
+            isRedOn = redLightState;
+            isYellowOn = yellowLightState;
+            isGreenOn = greenLightState;
+
             if (RedHalo != null)
                 RedHalo.SetActive(redLightState);
 
             if (RedRenderer != null)
                 RedRenderer.material = redLightState ? RedOnMat : RedOffMat;
 
-            // 🟡 YELLOW
             if (YellowHalo != null)
                 YellowHalo.SetActive(yellowLightState);
 
             if (YellowRenderer != null)
                 YellowRenderer.material = yellowLightState ? YellowOnMat : YellowOffMat;
 
-            // 🟢 GREEN
             if (GreenHalo != null)
                 GreenHalo.SetActive(greenLightState);
 
             if (GreenRenderer != null)
                 GreenRenderer.material = greenLightState ? GreenOnMat : GreenOffMat;
+        }
+
+        public bool IsRedState()
+        {
+            return isRedOn;
+        }
+
+        public bool IsYellowState()
+        {
+            return isYellowOn;
+        }
+
+        public bool IsGreenState()
+        {
+            return isGreenOn;
         }
     }
 }

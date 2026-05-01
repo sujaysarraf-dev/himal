@@ -1,11 +1,13 @@
 using UnityEngine;
-using HealthbarGames;
 
 public class SimpleTrafficLight : MonoBehaviour
 {
-    public HaloTrafficLight haloTrafficLight;
+    [Header("Lights")]
+    public GameObject redLight;
+    public GameObject yellowLight;
+    public GameObject greenLight;
 
-    [Header("Timing (seconds) - FAST for testing")]
+    [Header("Timing (seconds)")]
     public float redDuration = 3f;
     public float yellowDuration = 1f;
     public float greenDuration = 3f;
@@ -16,10 +18,7 @@ public class SimpleTrafficLight : MonoBehaviour
 
     void Start()
     {
-        if (haloTrafficLight == null)
-            haloTrafficLight = GetComponent<HaloTrafficLight>();
-
-        Debug.Log("TrafficLight " + gameObject.name + " started - Initializing as RED");
+        Debug.Log("TrafficLight " + gameObject.name + " starting - RED");
         SetState(LightState.Red);
     }
 
@@ -32,15 +31,12 @@ public class SimpleTrafficLight : MonoBehaviour
             switch (currentState)
             {
                 case LightState.Red:
-                    Debug.Log("TrafficLight " + gameObject.name + " -> GREEN");
                     SetState(LightState.Green);
                     break;
                 case LightState.Green:
-                    Debug.Log("TrafficLight " + gameObject.name + " -> YELLOW");
                     SetState(LightState.Yellow);
                     break;
                 case LightState.Yellow:
-                    Debug.Log("TrafficLight " + gameObject.name + " -> RED");
                     SetState(LightState.Red);
                     break;
             }
@@ -50,36 +46,26 @@ public class SimpleTrafficLight : MonoBehaviour
     void SetState(LightState state)
     {
         currentState = state;
+        timer = GetDuration(state);
 
+        if (redLight) redLight.SetActive(state == LightState.Red);
+        if (yellowLight) yellowLight.SetActive(state == LightState.Yellow);
+        if (greenLight) greenLight.SetActive(state == LightState.Green);
+    }
+
+    float GetDuration(LightState state)
+    {
         switch (state)
         {
-            case LightState.Red:
-                haloTrafficLight?.ChangeLightState(true, false, false, null);
-                timer = redDuration;
-                break;
-            case LightState.Green:
-                haloTrafficLight?.ChangeLightState(false, false, true, null);
-                timer = greenDuration;
-                break;
-            case LightState.Yellow:
-                haloTrafficLight?.ChangeLightState(false, true, false, null);
-                timer = yellowDuration;
-                break;
+            case LightState.Red: return redDuration;
+            case LightState.Yellow: return yellowDuration;
+            case LightState.Green: return greenDuration;
+            default: return 3f;
         }
     }
 
-    public bool IsRed()
-    {
-        return currentState == LightState.Red;
-    }
-
-    public bool IsGreen()
-    {
-        return currentState == LightState.Green;
-    }
-
-    public string GetState()
-    {
-        return currentState.ToString();
-    }
+    public bool IsRed() => currentState == LightState.Red;
+    public bool IsYellow() => currentState == LightState.Yellow;
+    public bool IsGreen() => currentState == LightState.Green;
+    public string GetState() => currentState.ToString();
 }

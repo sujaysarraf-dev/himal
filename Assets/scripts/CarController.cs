@@ -1,13 +1,14 @@
 using UnityEngine;
+using HealthbarGames;
 
 public class CarController : MonoBehaviour
 {
     public Transform[] wheelMeshes;
     public float speed = 10f;
-    public float stopDistance = 20f;
+    public float stopDistance = 15f;
 
     private Rigidbody rb;
-    private SimpleTrafficLight detectedLight;
+    private ZebraCrossing detectedZebra;
     private bool isStopped = false;
 
     void Start()
@@ -30,7 +31,7 @@ public class CarController : MonoBehaviour
 
     void FixedUpdate()
     {
-        DetectTrafficLight();
+        DetectZebraCrossing();
 
         if (!isStopped)
         {
@@ -50,29 +51,38 @@ public class CarController : MonoBehaviour
         }
     }
 
-    void DetectTrafficLight()
+    void DetectZebraCrossing()
     {
         RaycastHit hit;
         Vector3 rayOrigin = transform.position + Vector3.up * 0.5f;
 
+        Debug.Log("Raycasting forward from " + gameObject.name + " at position " + transform.position);
+
         if (Physics.Raycast(rayOrigin, transform.forward, out hit, stopDistance))
         {
-            SimpleTrafficLight light = hit.collider.GetComponentInParent<SimpleTrafficLight>();
+            Debug.Log("Ray hit: " + hit.collider.name + " tag: " + hit.collider.tag);
 
-            if (light != null)
+            ZebraCrossing zebra = hit.collider.GetComponent<ZebraCrossing>();
+            if (zebra == null) zebra = hit.collider.GetComponentInParent<ZebraCrossing>();
+
+            Debug.Log("ZebraCrossing found: " + (zebra != null));
+
+            if (zebra != null)
             {
-                if (detectedLight != light)
+                if (detectedZebra != zebra)
                 {
-                    detectedLight = light;
-                    Debug.Log("Car " + gameObject.name + " detected traffic light: " + light.gameObject.name + " (State: " + light.GetState() + ")");
+                    detectedZebra = zebra;
+                    Debug.Log("Car " + gameObject.name + " detected zebra: " + zebra.gameObject.name);
                 }
 
-                if (light.IsRed())
+                Debug.Log("isPedestrianCrossing: " + zebra.isPedestrianCrossing);
+
+                if (zebra.isPedestrianCrossing)
                 {
                     if (!isStopped)
                     {
                         isStopped = true;
-                        Debug.Log("Car " + gameObject.name + " STOPPED at RED light");
+                        Debug.Log("Car " + gameObject.name + " STOPPED");
                     }
                 }
                 else
@@ -80,22 +90,22 @@ public class CarController : MonoBehaviour
                     if (isStopped)
                     {
                         isStopped = false;
-                        Debug.Log("Car " + gameObject.name + " GOING - light is " + light.GetState());
+                        Debug.Log("Car " + gameObject.name + " GOING");
                     }
                 }
             }
         }
         else
         {
+            Debug.Log("Ray hit nothing");
             if (isStopped)
             {
                 isStopped = false;
-                Debug.Log("Car " + gameObject.name + " GOING - no light detected");
+                Debug.Log("Car " + gameObject.name + " GOING - no zebra");
             }
-            detectedLight = null;
+            detectedZebra = null;
         }
 
-        // Draw debug ray
         Debug.DrawRay(rayOrigin, transform.forward * stopDistance, isStopped ? Color.red : Color.green);
     }
 
