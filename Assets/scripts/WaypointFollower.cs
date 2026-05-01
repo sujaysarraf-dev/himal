@@ -3,16 +3,18 @@ using UnityEngine;
 public class WaypointFollower : MonoBehaviour
 {
     public Transform[] waypoints;
-    public Transform[] zebraCrossings; // Drag zebra prefabs here
     public float speed = 10f;
     public float waypointThreshold = 2f;
     public float rotationSpeed = 5f;
-    public float zebraStopDistance = 15f; // Distance to stop before zebra
+    public float zebraStopDistance = 15f;
+    public Transform[] zebraCrossings;
+    public float carStopDistance = 5f;
 
     private int currentWaypointIndex = 0;
     private Rigidbody rb;
     private bool isTurning = false;
     private bool isStoppedForZebra = false;
+    private float currentSpeed;
 
     void Start()
     {
@@ -23,20 +25,16 @@ public class WaypointFollower : MonoBehaviour
             rb.collisionDetectionMode = CollisionDetectionMode.ContinuousDynamic;
         }
 
+        currentSpeed = speed;
+
         if (waypoints == null || waypoints.Length == 0)
         {
             Debug.LogError("No waypoints assigned!");
-        }
-
-        if (zebraCrossings == null || zebraCrossings.Length == 0)
-        {
-            Debug.LogWarning("No zebra crossings assigned - car won't stop for zebras!");
         }
     }
 
     void FixedUpdate()
     {
-        // Check if should stop for zebra
         bool shouldStop = CheckZebraCrossing();
 
         if (shouldStop)
@@ -62,14 +60,38 @@ public class WaypointFollower : MonoBehaviour
             }
         }
 
+        // Check car in front
+        float targetSpeed = speed;
+        WaypointFollower[] allCars = FindObjectsOfType<WaypointFollower>();
+
+        foreach (WaypointFollower otherCar in allCars)
+        {
+            if (otherCar == this) continue;
+
+            float dist = Vector3.Distance(transform.position, otherCar.transform.position);
+            Vector3 toOther = otherCar.transform.position - transform.position;
+            float angle = Vector3.Angle(transform.forward, toOther);
+
+            if (angle < 30f && dist < carStopDistance)
+            {
+                targetSpeed = 0f;
+                Debug.Log("Car STOPPED - car ahead! dist=" + dist);
+                break;
+            }
+            else if (angle < 30f && dist < carStopDistance * 2f)
+            {
+                targetSpeed = Mathf.Min(targetSpeed, speed * (dist / (carStopDistance * 2f)));
+            }
+        }
+
         if (waypoints == null || waypoints.Length == 0) return;
 
         Transform targetWaypoint = waypoints[currentWaypointIndex];
         Vector3 direction = (targetWaypoint.position - transform.position).normalized;
         direction.y = 0;
 
-        float angle = Vector3.SignedAngle(transform.forward, direction, Vector3.up);
-        isTurning = Mathf.Abs(angle) > 15f;
+        float angleToWaypoint = Vector3.SignedAngle(transform.forward, direction, Vector3.up);
+        isTurning = Mathf.Abs(angleToWaypoint) > 15f;
 
         float actualRotationSpeed = isTurning ? rotationSpeed * 0.5f : rotationSpeed;
 
@@ -79,10 +101,14 @@ public class WaypointFollower : MonoBehaviour
             transform.rotation = Quaternion.Slerp(transform.rotation, targetRotation, Time.fixedDeltaTime * actualRotationSpeed);
         }
 
-        if (rb != null)
+        if (rb != null && targetSpeed > 0f)
         {
             float currentYVelocity = rb.linearVelocity.y;
-            rb.linearVelocity = new Vector3(transform.forward.x * speed, currentYVelocity, transform.forward.z * speed);
+            rb.linearVelocity = new Vector3(transform.forward.x * targetSpeed, currentYVelocity, transform.forward.z * targetSpeed);
+        }
+        else if (rb != null)
+        {
+            rb.linearVelocity = Vector3.zero;
         }
 
         float distance = Vector3.Distance(new Vector3(transform.position.x, 0, transform.position.z),
@@ -108,23 +134,17 @@ public class WaypointFollower : MonoBehaviour
 
             ZebraCrossing zebraScript = zebra.GetComponent<ZebraCrossing>();
             if (zebraScript == null) continue;
-
-            // Check if player is on this zebra
             if (!zebraScript.isPlayerOnZebra) continue;
 
-            // Check if zebra is ahead of car (within 45 degree angle)
             Vector3 toZebra = zebra.position - transform.position;
             toZebra.y = 0;
             float angle = Vector3.Angle(transform.forward, toZebra);
-            
-            if (angle > 45f) continue; // Zebra is behind or to the side
 
-            // Check distance
+            if (angle > 45f) continue;
+
             float dist = Vector3.Distance(transform.position, zebra.position);
-            
             if (dist < zebraStopDistance)
             {
-                Debug.Log("Zebra ahead! dist=" + dist + " | stopping");
                 return true;
             }
         }
