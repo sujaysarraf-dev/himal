@@ -119,8 +119,12 @@ namespace HealthbarGames
         // sets yellow lights state for all attached traffic lights (called during yellow light blink loop)
         public void YellowBlink(bool lightState)
         {
+            if (TrafficLights == null)
+                return;
             foreach (TrafficLightBase tl in TrafficLights)
             {
+                if (tl == null)
+                    continue;
                 tl.ChangeLightState(false, lightState, false, this);
             }
         }
@@ -128,10 +132,14 @@ namespace HealthbarGames
         // notifies all attached traffic lights about new state
         private void ChangeLightState(bool redLightState, bool yellowLightState, bool greenLightState)
         {
+            if (TrafficLights == null)
+                return;
             foreach (TrafficLightBase tl in TrafficLights)
             {
+                if (tl == null)
+                    continue;
                 tl.ChangeLightState(redLightState, yellowLightState, greenLightState, this);
-            }
-        }
+}
     }
+}
 }
