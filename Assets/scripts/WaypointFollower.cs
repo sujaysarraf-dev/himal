@@ -3,12 +3,16 @@ using UnityEngine;
 public class WaypointFollower : MonoBehaviour
 {
     public Transform[] waypoints;
+    public Transform[] zebraCrossings; // Drag zebra prefabs here
     public float speed = 10f;
     public float waypointThreshold = 2f;
     public float rotationSpeed = 5f;
+    public float zebraStopDistance = 15f; // Distance to stop before zebra
 
     private int currentWaypointIndex = 0;
     private Rigidbody rb;
+    private bool isTurning = false;
+    private bool isStoppedForZebra = false;
 
     void Start()
     {
@@ -23,10 +27,41 @@ public class WaypointFollower : MonoBehaviour
         {
             Debug.LogError("No waypoints assigned!");
         }
+
+        if (zebraCrossings == null || zebraCrossings.Length == 0)
+        {
+            Debug.LogWarning("No zebra crossings assigned - car won't stop for zebras!");
+        }
     }
 
     void FixedUpdate()
     {
+        // Check if should stop for zebra
+        bool shouldStop = CheckZebraCrossing();
+
+        if (shouldStop)
+        {
+            if (!isStoppedForZebra)
+            {
+                isStoppedForZebra = true;
+                Debug.Log("Car STOPPED for zebra crossing!");
+            }
+
+            if (rb != null)
+            {
+                rb.linearVelocity = Vector3.zero;
+            }
+            return;
+        }
+        else
+        {
+            if (isStoppedForZebra)
+            {
+                isStoppedForZebra = false;
+                Debug.Log("Car GOING - zebra clear!");
+            }
+        }
+
         if (waypoints == null || waypoints.Length == 0) return;
 
         Transform targetWaypoint = waypoints[currentWaypointIndex];
@@ -34,10 +69,10 @@ public class WaypointFollower : MonoBehaviour
         direction.y = 0;
 
         float angle = Vector3.SignedAngle(transform.forward, direction, Vector3.up);
-        bool isTurning = Mathf.Abs(angle) > 15f;
+        isTurning = Mathf.Abs(angle) > 15f;
 
         float actualRotationSpeed = isTurning ? rotationSpeed * 0.5f : rotationSpeed;
-        
+
         if (direction != Vector3.zero)
         {
             Quaternion targetRotation = Quaternion.LookRotation(direction);
@@ -61,5 +96,39 @@ public class WaypointFollower : MonoBehaviour
                 currentWaypointIndex = 0;
             }
         }
+    }
+
+    bool CheckZebraCrossing()
+    {
+        if (zebraCrossings == null || zebraCrossings.Length == 0) return false;
+
+        foreach (Transform zebra in zebraCrossings)
+        {
+            if (zebra == null) continue;
+
+            ZebraCrossing zebraScript = zebra.GetComponent<ZebraCrossing>();
+            if (zebraScript == null) continue;
+
+            // Check if player is on this zebra
+            if (!zebraScript.isPlayerOnZebra) continue;
+
+            // Check if zebra is ahead of car (within 45 degree angle)
+            Vector3 toZebra = zebra.position - transform.position;
+            toZebra.y = 0;
+            float angle = Vector3.Angle(transform.forward, toZebra);
+            
+            if (angle > 45f) continue; // Zebra is behind or to the side
+
+            // Check distance
+            float dist = Vector3.Distance(transform.position, zebra.position);
+            
+            if (dist < zebraStopDistance)
+            {
+                Debug.Log("Zebra ahead! dist=" + dist + " | stopping");
+                return true;
+            }
+        }
+
+        return false;
     }
 }
