@@ -5,8 +5,11 @@ public class CarController : MonoBehaviour
 {
     public Transform[] wheelMeshes;
     public float speed = 10f;
+    public TrafficLightBase[] trafficLights; // Traffic lights that affect this car
+    public float trafficLightStopDistance = 20f; // Distance to stop before red light
 
     private Rigidbody rb;
+    private bool isStoppedForTrafficLight = false;
 
     void Start()
     {
@@ -28,6 +31,32 @@ public class CarController : MonoBehaviour
 
     void FixedUpdate()
     {
+        // Check if should stop for traffic light
+        bool shouldStopForLight = CheckTrafficLight();
+
+        if (shouldStopForLight)
+        {
+            if (!isStoppedForTrafficLight)
+            {
+                isStoppedForTrafficLight = true;
+                Debug.Log("Car STOPPED for red light!");
+            }
+
+            if (rb != null)
+            {
+                rb.linearVelocity = Vector3.zero;
+            }
+            return;
+        }
+        else
+        {
+            if (isStoppedForTrafficLight)
+            {
+                isStoppedForTrafficLight = false;
+                Debug.Log("Car GOING - light is green!");
+            }
+        }
+
         if (rb != null)
         {
             float currentYVelocity = rb.linearVelocity.y;
@@ -69,5 +98,39 @@ public class CarController : MonoBehaviour
                 wheel.Rotate(Vector3.right * rotationSpeed * Time.fixedDeltaTime);
             }
         }
+    }
+
+    bool CheckTrafficLight()
+    {
+        if (trafficLights == null || trafficLights.Length == 0) return false;
+
+        foreach (TrafficLightBase trafficLight in trafficLights)
+        {
+            if (trafficLight == null) continue;
+
+            // Check if traffic light is ahead of car (within 45 degree angle)
+            Vector3 toLight = trafficLight.transform.position - transform.position;
+            toLight.y = 0;
+            float angle = Vector3.Angle(transform.forward, toLight);
+
+            if (angle > 45f) continue; // Light is behind or to the side
+
+            // Check distance
+            float dist = Vector3.Distance(transform.position, trafficLight.transform.position);
+
+            if (dist > trafficLightStopDistance) continue; // Light is too far
+
+            // Get current state of traffic light
+            TrafficLightBase.State lightState = trafficLight.GetState();
+
+            // Stop for red light (Stop) or yellow light (PrepareToStop)
+            if (lightState == TrafficLightBase.State.Stop || lightState == TrafficLightBase.State.PrepareToStop)
+            {
+                Debug.Log("Traffic light ahead! State: " + lightState + " | dist=" + dist + " | stopping");
+                return true;
+            }
+        }
+
+        return false;
     }
 }

@@ -1,18 +1,22 @@
 using UnityEngine;
+using HealthbarGames;
 
 public class WaypointFollower : MonoBehaviour
 {
     public Transform[] waypoints;
     public Transform[] zebraCrossings; // Drag zebra prefabs here
+    public TrafficLightBase[] trafficLights; // Traffic lights that affect this car
     public float speed = 10f;
     public float waypointThreshold = 2f;
     public float rotationSpeed = 5f;
     public float zebraStopDistance = 15f; // Distance to stop before zebra
+    public float trafficLightStopDistance = 20f; // Distance to stop before red light
 
     private int currentWaypointIndex = 0;
     private Rigidbody rb;
     private bool isTurning = false;
     private bool isStoppedForZebra = false;
+    private bool isStoppedForTrafficLight = false;
 
     void Start()
     {
@@ -37,14 +41,24 @@ public class WaypointFollower : MonoBehaviour
     void FixedUpdate()
     {
         // Check if should stop for zebra
-        bool shouldStop = CheckZebraCrossing();
+        bool shouldStopForZebra = CheckZebraCrossing();
 
-        if (shouldStop)
+        // Check if should stop for traffic light
+        bool shouldStopForLight = CheckTrafficLight();
+
+        // Stop if either zebra or traffic light requires stopping
+        if (shouldStopForZebra || shouldStopForLight)
         {
-            if (!isStoppedForZebra)
+            if (shouldStopForZebra && !isStoppedForZebra)
             {
                 isStoppedForZebra = true;
                 Debug.Log("Car STOPPED for zebra crossing!");
+            }
+
+            if (shouldStopForLight && !isStoppedForTrafficLight)
+            {
+                isStoppedForTrafficLight = true;
+                Debug.Log("Car STOPPED for red light!");
             }
 
             if (rb != null)
@@ -59,6 +73,12 @@ public class WaypointFollower : MonoBehaviour
             {
                 isStoppedForZebra = false;
                 Debug.Log("Car GOING - zebra clear!");
+            }
+
+            if (isStoppedForTrafficLight)
+            {
+                isStoppedForTrafficLight = false;
+                Debug.Log("Car GOING - light is green!");
             }
         }
 
@@ -125,6 +145,40 @@ public class WaypointFollower : MonoBehaviour
             if (dist < zebraStopDistance)
             {
                 Debug.Log("Zebra ahead! dist=" + dist + " | stopping");
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    bool CheckTrafficLight()
+    {
+        if (trafficLights == null || trafficLights.Length == 0) return false;
+
+        foreach (TrafficLightBase trafficLight in trafficLights)
+        {
+            if (trafficLight == null) continue;
+
+            // Check if traffic light is ahead of car (within 45 degree angle)
+            Vector3 toLight = trafficLight.transform.position - transform.position;
+            toLight.y = 0;
+            float angle = Vector3.Angle(transform.forward, toLight);
+
+            if (angle > 45f) continue; // Light is behind or to the side
+
+            // Check distance
+            float dist = Vector3.Distance(transform.position, trafficLight.transform.position);
+
+            if (dist > trafficLightStopDistance) continue; // Light is too far
+
+            // Get current state of traffic light
+            TrafficLightBase.State lightState = trafficLight.GetState();
+
+            // Stop for red light (Stop) or yellow light (PrepareToStop)
+            if (lightState == TrafficLightBase.State.Stop || lightState == TrafficLightBase.State.PrepareToStop)
+            {
+                Debug.Log("Traffic light ahead! State: " + lightState + " | dist=" + dist + " | stopping");
                 return true;
             }
         }

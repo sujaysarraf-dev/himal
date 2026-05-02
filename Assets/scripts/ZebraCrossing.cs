@@ -2,30 +2,30 @@ using UnityEngine;
 
 public class ZebraCrossing : MonoBehaviour
 {
-    private int playerCount = 0;
-    public bool isPlayerOnZebra => playerCount > 0;
+    private int characterCount = 0;
+    public bool isPlayerOnZebra => characterCount > 0;
 
     void OnTriggerEnter(Collider other)
     {
-        if (other.CompareTag("Player"))
+        if (other.CompareTag("Player") || other.CompareTag("NPC"))
         {
-            playerCount++;
-            Debug.Log("Player entered zebra: " + gameObject.name);
+            characterCount++;
+            Debug.Log(other.tag + " entered zebra: " + gameObject.name);
         }
     }
 
     void OnTriggerExit(Collider other)
     {
-        if (other.CompareTag("Player"))
+        if (other.CompareTag("Player") || other.CompareTag("NPC"))
         {
-            playerCount--;
-            if (playerCount < 0) playerCount = 0;
-            Debug.Log("Player exited zebra: " + gameObject.name);
+            characterCount--;
+            if (characterCount < 0) characterCount = 0;
+            Debug.Log(other.tag + " exited zebra: " + gameObject.name);
         }
     }
 
     void Update()
     {
-        Debug.Log("Zebra: " + gameObject.name + " | PlayerOn=" + isPlayerOnZebra);
+        Debug.Log("Zebra: " + gameObject.name + " | CharacterOn=" + isPlayerOnZebra);
     }
 }
