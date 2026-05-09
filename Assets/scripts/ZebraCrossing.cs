@@ -2,11 +2,19 @@ using UnityEngine;
 
 public class ZebraCrossing : MonoBehaviour
 {
-    private int entityCount = 0;
+    [Header("UI Feedback")]
+    public GameObject crossingUI;
     
     // Keeping the name the same so we don't break the car scripts, 
     // but now it includes both Players and NPCs
     public bool isPlayerOnZebra => entityCount > 0;
+
+    private int entityCount = 0;
+
+    void Start()
+    {
+        if (crossingUI != null) crossingUI.SetActive(false);
+    }
 
     void OnTriggerEnter(Collider other)
     {
@@ -14,6 +22,7 @@ public class ZebraCrossing : MonoBehaviour
         if (other.CompareTag("Player") || other.CompareTag("NPC"))
         {
             entityCount++;
+            if (crossingUI != null) crossingUI.SetActive(true);
             Debug.Log($"{other.tag} entered zebra: {gameObject.name} (Total: {entityCount})");
         }
     }
@@ -23,7 +32,11 @@ public class ZebraCrossing : MonoBehaviour
         if (other.CompareTag("Player") || other.CompareTag("NPC"))
         {
             entityCount--;
-            if (entityCount < 0) entityCount = 0;
+            if (entityCount <= 0)
+            {
+                entityCount = 0;
+                if (crossingUI != null) crossingUI.SetActive(false);
+            }
             Debug.Log($"{other.tag} exited zebra: {gameObject.name} (Total: {entityCount})");
         }
     }

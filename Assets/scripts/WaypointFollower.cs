@@ -1,4 +1,5 @@
 using UnityEngine;
+using HealthbarGames;
 
 public class WaypointFollower : MonoBehaviour
 {
@@ -8,6 +9,8 @@ public class WaypointFollower : MonoBehaviour
     public float rotationSpeed = 5f;
     public float zebraStopDistance = 15f;
     public Transform[] zebraCrossings;
+    public TrafficLightBase[] trafficLights;
+    public float lightStopDistance = 10f;
     public float carStopDistance = 5f;
 
     private int currentWaypointIndex = 0;
@@ -35,9 +38,10 @@ public class WaypointFollower : MonoBehaviour
 
     void FixedUpdate()
     {
-        bool shouldStop = CheckZebraCrossing();
+        bool shouldStopForZebra = CheckZebraCrossing();
+        bool shouldStopForLight = CheckTrafficLights();
 
-        if (shouldStop)
+        if (shouldStopForZebra || shouldStopForLight)
         {
             if (!isStoppedForZebra)
             {
@@ -146,6 +150,39 @@ public class WaypointFollower : MonoBehaviour
             if (dist < zebraStopDistance)
             {
                 return true;
+            }
+        }
+
+        return false;
+    }
+
+    bool CheckTrafficLights()
+    {
+        if (trafficLights == null || trafficLights.Length == 0) return false;
+
+        foreach (TrafficLightBase light in trafficLights)
+        {
+            if (light == null) continue;
+
+            // Get the state of the light
+            TrafficLightBase.State state = light.GetState();
+            
+            // If it's Go or Blank or Malfunction, we don't stop
+            if (state == TrafficLightBase.State.Go || state == TrafficLightBase.State.Blank || state == TrafficLightBase.State.YellowBlink)
+                continue;
+
+            // Check distance
+            float dist = Vector3.Distance(transform.position, light.transform.position);
+            if (dist < lightStopDistance)
+            {
+                // Check if it's in front of us
+                Vector3 toLight = light.transform.position - transform.position;
+                float angle = Vector3.Angle(transform.forward, toLight);
+                
+                if (angle < 60f) // If light is in front
+                {
+                    return true;
+                }
             }
         }
 

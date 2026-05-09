@@ -1,4 +1,5 @@
 using UnityEngine;
+using HealthbarGames;
 
 public class NPCFollower : MonoBehaviour
 {
@@ -9,6 +10,10 @@ public class NPCFollower : MonoBehaviour
     public float rotationSpeed = 5f;
     public float stopDistance = 0.2f;
     public float waitTimeAtWaypoint = 1f;
+
+    [Header("Traffic Light Settings")]
+    public TrafficLightBase trafficLightToWatch;
+    public bool onlyCrossOnRed = false; // If true, NPC waits for Red light to cross
     
     [Header("Animation Settings")]
     public string speedParameterName = "Speed";
@@ -16,6 +21,7 @@ public class NPCFollower : MonoBehaviour
 
     private int currentWaypointIndex = 0;
     private bool isWaiting = false;
+    private bool isCrossing = false; // New: Tracks if we are currently moving between waypoints
     private float waitTimer = 0f;
     private Animator animator;
     private int animIDSpeed;
@@ -41,9 +47,25 @@ public class NPCFollower : MonoBehaviour
     {
         if (waypoints == null || waypoints.Length == 0 || currentWaypointIndex >= waypoints.Length) return;
 
+        // --- Traffic Light Check ---
+        // Only stop if we haven't started crossing to the next waypoint yet
+        if (!isCrossing && onlyCrossOnRed && trafficLightToWatch != null)
+        {
+            TrafficLightBase.State state = trafficLightToWatch.GetState();
+            
+            // If the light is GREEN or YELLOW for cars, the NPC should NOT START
+            if (state != TrafficLightBase.State.Stop && state != TrafficLightBase.State.Blank)
+            {
+                UpdateAnimation(0f);
+                return; 
+            }
+        }
+        // ---------------------------
+
         if (isWaiting)
         {
             waitTimer -= Time.deltaTime;
+            isCrossing = false; // We are waiting, so we are not "crossing"
             UpdateAnimation(0f);
             if (waitTimer <= 0)
             {
@@ -53,6 +75,7 @@ public class NPCFollower : MonoBehaviour
             return;
         }
 
+        isCrossing = true; // We are actively moving towards a waypoint
         MoveTowardsWaypoint();
     }
 
