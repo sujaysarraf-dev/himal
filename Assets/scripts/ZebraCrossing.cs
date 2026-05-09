@@ -2,30 +2,35 @@ using UnityEngine;
 
 public class ZebraCrossing : MonoBehaviour
 {
-    private int playerCount = 0;
-    public bool isPlayerOnZebra => playerCount > 0;
+    private int entityCount = 0;
+    
+    // Keeping the name the same so we don't break the car scripts, 
+    // but now it includes both Players and NPCs
+    public bool isPlayerOnZebra => entityCount > 0;
 
     void OnTriggerEnter(Collider other)
     {
-        if (other.CompareTag("Player"))
+        // Check for both Player and NPC tags
+        if (other.CompareTag("Player") || other.CompareTag("NPC"))
         {
-            playerCount++;
-            Debug.Log("Player entered zebra: " + gameObject.name);
+            entityCount++;
+            Debug.Log($"{other.tag} entered zebra: {gameObject.name} (Total: {entityCount})");
         }
     }
 
     void OnTriggerExit(Collider other)
     {
-        if (other.CompareTag("Player"))
+        if (other.CompareTag("Player") || other.CompareTag("NPC"))
         {
-            playerCount--;
-            if (playerCount < 0) playerCount = 0;
-            Debug.Log("Player exited zebra: " + gameObject.name);
+            entityCount--;
+            if (entityCount < 0) entityCount = 0;
+            Debug.Log($"{other.tag} exited zebra: {gameObject.name} (Total: {entityCount})");
         }
     }
 
-    void Update()
+    // Optional: Reset count on Disable to prevent ghost counts
+    void OnDisable()
     {
-        Debug.Log("Zebra: " + gameObject.name + " | PlayerOn=" + isPlayerOnZebra);
+        entityCount = 0;
     }
 }
