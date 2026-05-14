@@ -13,10 +13,7 @@ public class NPCFollower : MonoBehaviour
 
     [Header("Traffic Light Settings")]
     public TrafficLightBase trafficLightToWatch;
-    public float lightStopDistance = 15f;
-    
-    private bool isWaitingForGreen = false; // True if stopped waiting for green light
-    private bool isCrossing = false; // True if currently crossing (started on red)
+    public bool onlyCrossOnRed = false; // If true, NPC waits for Red light to cross
     
     [Header("Animation Settings")]
     public string speedParameterName = "Speed";
@@ -24,6 +21,7 @@ public class NPCFollower : MonoBehaviour
 
     private int currentWaypointIndex = 0;
     private bool isWaiting = false;
+    private bool isCrossing = false; // New: Tracks if we are currently moving between waypoints
     private float waitTimer = 0f;
     private Animator animator;
     private int animIDSpeed;
@@ -49,42 +47,20 @@ public class NPCFollower : MonoBehaviour
     {
         if (waypoints == null || waypoints.Length == 0 || currentWaypointIndex >= waypoints.Length) return;
 
-        // If currently crossing, keep going regardless of light
-        if (isCrossing)
-        {
-            MoveTowardsWaypoint();
-            return;
-        }
-
-        // Get traffic light state
-        if (trafficLightToWatch != null)
+        // --- Traffic Light Check ---
+        // Only stop if we haven't started crossing to the next waypoint yet
+        if (!isCrossing && onlyCrossOnRed && trafficLightToWatch != null)
         {
             TrafficLightBase.State state = trafficLightToWatch.GetState();
-            bool isRed = (state == TrafficLightBase.State.Stop);
-
-            Vector3 toLight = trafficLightToWatch.transform.position - transform.position;
-            toLight.y = 0;
-            float dist = toLight.magnitude;
-            float dotProduct = Vector3.Dot(transform.forward, toLight.normalized);
-
-            bool nearLight = (dotProduct > 0.3f && dist < lightStopDistance && dist > 1.5f);
-
-            // NPC moves only when RED (cars stopped = safe to cross)
-            if (!isRed && nearLight)
+            
+            // If the light is GREEN or YELLOW for cars, the NPC should NOT START
+            if (state != TrafficLightBase.State.Stop && state != TrafficLightBase.State.Blank)
             {
-                isWaitingForGreen = true;
                 UpdateAnimation(0f);
-                return;
+                return; 
             }
         }
-
-        // Light is red = GO
-        if (isWaitingForGreen)
-        {
-            isWaitingForGreen = false;
-            isCrossing = true;
-            Debug.Log($"NPC {gameObject.name} STARTED crossing!");
-        }
+        // ---------------------------
 
         if (isWaiting)
         {
@@ -109,7 +85,7 @@ public class NPCFollower : MonoBehaviour
         if (target == null) return;
 
         Vector3 direction = (target.position - transform.position);
-        direction.y = 0;
+        direction.y = 0; // Keep movement on the ground plane
 
         float distance = direction.magnitude;
 
@@ -117,17 +93,17 @@ public class NPCFollower : MonoBehaviour
         {
             isWaiting = true;
             waitTimer = waitTimeAtWaypoint;
-            // Reset crossing flag when reaching waypoint
-            isCrossing = false;
             return;
         }
 
+        // Rotation
         if (direction != Vector3.zero)
         {
             Quaternion targetRotation = Quaternion.LookRotation(direction);
             transform.rotation = Quaternion.Slerp(transform.rotation, targetRotation, rotationSpeed * Time.deltaTime);
         }
 
+        // Movement
         transform.position = Vector3.MoveTowards(transform.position, new Vector3(target.position.x, transform.position.y, target.position.z), moveSpeed * Time.deltaTime);
         
         UpdateAnimation(moveSpeed);
