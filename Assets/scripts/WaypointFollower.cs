@@ -64,27 +64,23 @@ public class WaypointFollower : MonoBehaviour
             }
         }
 
-        // Check car in front
+        // Check car in front using raycast
         float targetSpeed = speed;
-        WaypointFollower[] allCars = FindObjectsOfType<WaypointFollower>();
-
-        foreach (WaypointFollower otherCar in allCars)
+        Vector3 rayOrigin = transform.position + Vector3.up * 0.5f + transform.forward;
+        RaycastHit hit;
+        if (Physics.Raycast(rayOrigin, transform.forward, out hit, carStopDistance))
         {
-            if (otherCar == this) continue;
-
-            float dist = Vector3.Distance(transform.position, otherCar.transform.position);
-            Vector3 toOther = otherCar.transform.position - transform.position;
-            float angle = Vector3.Angle(transform.forward, toOther);
-
-            if (angle < 30f && dist < carStopDistance)
+            if (hit.collider.GetComponent<WaypointFollower>() != null && hit.collider.gameObject != gameObject)
             {
                 targetSpeed = 0f;
-                Debug.Log("Car STOPPED - car ahead! dist=" + dist);
-                break;
+                Debug.Log("Car STOPPED - car ahead via raycast! dist=" + hit.distance);
             }
-            else if (angle < 30f && dist < carStopDistance * 2f)
+        }
+        else if (Physics.Raycast(rayOrigin, transform.forward, out hit, carStopDistance * 2f))
+        {
+            if (hit.collider.GetComponent<WaypointFollower>() != null && hit.collider.gameObject != gameObject)
             {
-                targetSpeed = Mathf.Min(targetSpeed, speed * (dist / (carStopDistance * 2f)));
+                targetSpeed = Mathf.Min(targetSpeed, speed * (hit.distance / (carStopDistance * 2f)));
             }
         }
 

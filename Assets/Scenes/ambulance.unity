@@ -23845,8 +23845,10 @@ MonoBehaviour:
   cameras:
   - cam: {fileID: 306512122}
     showTime: 1.2
+    music: {fileID: 0}
   - cam: {fileID: 820507398}
     showTime: 15
+    music: {fileID: 8300000, guid: 975205b29ec855640b3fe215388b411e, type: 3}
 --- !u!1001 &1276994869
 PrefabInstance:
   m_ObjectHideFlags: 0
